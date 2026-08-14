@@ -144,3 +144,11 @@ function setStatus(msg, type) {
   statusMsg.textContent = msg;
   statusMsg.className = `status-message ${type}`;
 }
+// Register Service Worker for Offline Mode
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then(reg => console.log('Offline Service Worker registered! Scope:', reg.scope))
+      .catch(err => console.error('Service Worker registration failed:', err));
+  });
+}
