@@ -1,39 +1,107 @@
-// Connected Google Apps Script Web App URL
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxw9iJvMfMwQ9SGeUDvd5Vr6u9AiXxTBrf7bfD80ZLIn-c2ZiEtc7YnqoyseOTHmDTbAw/exec";
 
-// Initialize page on load
+let existingToursList = [];
+let selectedTravelMode = "Train"; // Default active mode
+let activeTourName = "";
+
 window.addEventListener('DOMContentLoaded', () => {
+  // Set default date to Today
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('expenseDate').value = today;
 
+  // Restore Theme
+  const savedTheme = localStorage.getItem('appTheme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+
   loadTours();
-  
-  // Auto-sync queued offline entries when internet comes back
+
   window.addEventListener('online', syncOfflineExpenses);
-  // Check if internet is available right now on load
   if (navigator.onLine) {
     syncOfflineExpenses();
   }
 });
 
-function formatDateToDDMMYY(dateString) {
-  if (!dateString) return '';
-  const [year, month, day] = dateString.split('-');
-  return `${day}/${month}/${year.slice(-2)}`;
+// --- THEME SWITCHER ---
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute('data-theme');
+  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('appTheme', newTheme);
 }
 
-// Load tours into dropdown
+// --- NAVIGATION & PAGE LOGIC ---
+function goToPage1() {
+  document.getElementById('page2').classList.remove('active');
+  document.getElementById('page1').classList.add('active');
+}
+
+function proceedToPage2() {
+  const selectVal = document.getElementById('tourSelect').value;
+  const inputVal = document.getElementById('newTourInput').value.trim();
+  const errorSpan = document.getElementById('tourError');
+
+  errorSpan.textContent = "";
+
+  if (inputVal !== "") {
+    // Check uniqueness (case-insensitive)
+    const exists = existingToursList.some(t => t.toLowerCase() === inputVal.toLowerCase());
+    if (exists) {
+      errorSpan.textContent = "A tour with this name already exists. Select it from the dropdown above!";
+      return;
+    }
+    activeTourName = inputVal;
+  } else if (selectVal !== "") {
+    activeTourName = selectVal;
+  } else {
+    errorSpan.textContent = "Please select an existing tour or enter a new tour name.";
+    return;
+  }
+
+  // Update Page 2 Heading
+  document.getElementById('currentTourHeading').textContent = activeTourName;
+
+  // Switch pages
+  document.getElementById('page1').classList.remove('active');
+  document.getElementById('page2').classList.add('active');
+}
+
+function handleSelectTour() {
+  if (document.getElementById('tourSelect').value !== "") {
+    document.getElementById('newTourInput').value = "";
+    document.getElementById('tourError').textContent = "";
+  }
+}
+
+function handleInputTour() {
+  if (document.getElementById('newTourInput').value.trim() !== "") {
+    document.getElementById('tourSelect').value = "";
+    document.getElementById('tourError').textContent = "";
+  }
+}
+
+// --- TRAVEL MODE BUTTON SWITCH ---
+function selectTravelMode(btnElement) {
+  const buttons = document.querySelectorAll('#travelToggleGroup .toggle-btn');
+  buttons.forEach(b => b.classList.remove('active'));
+  
+  btnElement.classList.add('active');
+  selectedTravelMode = btnElement.getAttribute('data-mode');
+}
+
+// --- FETCH TOURS ---
 async function loadTours() {
-  const tourSelect = document.getElementById('tourSelect');
-  if (!navigator.onLine) return; // Skip fetch if offline
+  if (!navigator.onLine) return;
   
   try {
     const response = await fetch(`${SCRIPT_URL}?action=getTours`);
     const data = await response.json();
 
     if (data.status === 'success') {
-      tourSelect.innerHTML = '<option value="">-- Choose Existing Tour --</option>';
-      data.tours.forEach(tour => {
+      existingToursList = data.tours || [];
+      const tourSelect = document.getElementById('tourSelect');
+      tourSelect.innerHTML = '<option value="">-- Select Existing Tour --</option>';
+      
+      existingToursList.forEach(tour => {
         const option = document.createElement('option');
         option.value = tour;
         option.textContent = tour;
@@ -45,35 +113,33 @@ async function loadTours() {
   }
 }
 
-// MAIN SAVE FUNCTION (Handles Online + Offline)
+function formatDateToDDMMYY(dateString) {
+  if (!dateString) return '';
+  const [year, month, day] = dateString.split('-');
+  return `${day}/${month}/${year.slice(-2)}`;
+}
+
+// --- SAVE EXPENSE FUNCTION ---
 async function submitExpense() {
   const submitBtn = document.getElementById('submitBtn');
-  const tourSelect = document.getElementById('tourSelect').value;
-  const newTour = document.getElementById('newTourInput').value.trim();
-  const tourName = newTour !== "" ? newTour : tourSelect;
   const rawDate = document.getElementById('expenseDate').value;
 
-  if (!tourName) {
-    setStatus("Please select an existing tour or enter a new tour name.", "error");
-    return;
-  }
   if (!rawDate) {
     setStatus("Please select a date.", "error");
     return;
   }
 
   const payload = {
-    tourName: tourName,
+    tourName: activeTourName,
     date: formatDateToDDMMYY(rawDate),
     breakfast: document.getElementById('bfAmount').value,
     lunch: document.getElementById('lunchAmount').value,
     dinner: document.getElementById('dinnerAmount').value,
     accommodation: document.getElementById('stayAmount').value,
-    travelMode: document.getElementById('travelMode').value,
+    travelMode: selectedTravelMode,
     travelAmount: document.getElementById('travelAmount').value
   };
 
-  // CHECK IF OFFLINE
   if (!navigator.onLine) {
     saveToLocalQueue(payload);
     setStatus("Offline! Expense saved on phone. Will sync automatically when connected.", "info");
@@ -81,7 +147,6 @@ async function submitExpense() {
     return;
   }
 
-  // ONLINE SUBMISSION
   submitBtn.disabled = true;
   setStatus("Saving expense...", "info");
 
@@ -100,7 +165,6 @@ async function submitExpense() {
       setStatus(`Error: ${result.message}`, "error");
     }
   } catch (error) {
-    // Fallback if request failed due to sudden network loss
     saveToLocalQueue(payload);
     setStatus("Connection failed. Saved offline for auto-sync!", "info");
     resetFormFields();
@@ -109,8 +173,7 @@ async function submitExpense() {
   }
 }
 
-// --- LOCAL STORAGE (OFFLINE OUTBOX) FUNCTIONS ---
-
+// --- OFFLINE QUEUE MANAGEMENT ---
 function getLocalQueue() {
   const queue = localStorage.getItem('offlineExpenses');
   return queue ? JSON.parse(queue) : [];
@@ -138,10 +201,10 @@ async function syncOfflineExpenses() {
       });
       const result = await response.json();
       if (result.status !== 'success') {
-        remainingQueue.push(payload); // Retry later if error
+        remainingQueue.push(payload);
       }
     } catch (err) {
-      remainingQueue.push(payload); // Keep in queue if sync fails
+      remainingQueue.push(payload);
     }
   }
 
@@ -161,7 +224,6 @@ function resetFormFields() {
   document.getElementById('dinnerAmount').value = '';
   document.getElementById('stayAmount').value = '';
   document.getElementById('travelAmount').value = '';
-  document.getElementById('newTourInput').value = '';
   
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('expenseDate').value = today;
