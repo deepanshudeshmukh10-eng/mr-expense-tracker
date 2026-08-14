@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- App Icons for Browsers and iOS -->
+  <link rel="icon" type="image/png" href="./icon.png">
+  <link rel="apple-touch-icon" href="./icon.png">
+
+  <title>MR Expense Tracker</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <h1>MR Expense Tracker</h1>
+    </header>
+
+    <main class="form-card">
+      <!-- Tour Selection / Creation -->
+      <section class="form-section">
+        <label for="tourSelect">Select Existing Tour:</label>
+        <select id="tourSelect">
+          <option value="">-- Choose Existing Tour --</option>
+        </select>
+
+        <div class="divider">OR</div>
+
+        <label for="newTourInput">Enter New Tour Name:</label>
+        <input type="text" id="newTourInput" placeholder="e.g., Delhi Sales Tour">
+      </section>
+
+      <!-- Date Selection -->
+      <section class="form-section">
+        <label for="expenseDate">Expense Date:</label>
+        <input type="date" id="expenseDate">
+      </section>
+
+      <!-- Expense Categories -->
+      <section class="form-section">
+        <h3>Meals & Stay</h3>
+        
+        <div class="input-group">
+          <label for="bfAmount">Breakfast (₹)</label>
+          <input type="number" id="bfAmount" min="0" placeholder="0">
+        </div>
+
+        <div class="input-group">
+          <label for="lunchAmount">Lunch (₹)</label>
+          <input type="number" id="lunchAmount" min="0" placeholder="0">
+        </div>
+
+        <div class="input-group">
+          <label for="dinnerAmount">Dinner (₹)</label>
+          <input type="number" id="dinnerAmount" min="0" placeholder="0">
+        </div>
+
+        <div class="input-group">
+          <label for="stayAmount">Accommodation / Stay (₹)</label>
+          <input type="number" id="stayAmount" min="0" placeholder="0">
+        </div>
+      </section>
+
+      <!-- Travel Section with Modes -->
+      <section class="form-section">
+        <h3>Travel Details</h3>
+        
+        <div class="input-group">
+          <label for="travelMode">Mode of Travel</label>
+          <select id="travelMode">
+            <option value="Train">Train</option>
+            <option value="Bus">Bus</option>
+            <option value="Auto">Auto / Cab</option>
+            <option value="Flight">Flight</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label for="travelAmount">Travel Expense (₹)</label>
+          <input type="number" id="travelAmount" min="0" placeholder="0">
+        </div>
+      </section>
+
+      <!-- Actions & Messaging -->
+      <div class="actions-group">
+        <button id="submitBtn" class="btn btn-primary" onclick="submitExpense()">Save Expense</button>
+        <button id="downloadBtn" class="btn btn-secondary" onclick="downloadExcel()">Download Excel Sheet</button>
+      </div>
+
+      <div id="statusMsg" class="status-message"></div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
