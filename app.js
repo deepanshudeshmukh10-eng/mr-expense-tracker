@@ -3,24 +3,30 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxw9iJvMfMwQ9SGeUDvd
 
 // Initialize page on load
 window.addEventListener('DOMContentLoaded', () => {
-  // Set date field to today's local date
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('expenseDate').value = today;
 
-  // Load existing tour names into dropdown
   loadTours();
+  
+  // Auto-sync queued offline entries when internet comes back
+  window.addEventListener('online', syncOfflineExpenses);
+  // Check if internet is available right now on load
+  if (navigator.onLine) {
+    syncOfflineExpenses();
+  }
 });
 
-// Helper: Convert YYYY-MM-DD to DD/MM/YY
 function formatDateToDDMMYY(dateString) {
   if (!dateString) return '';
   const [year, month, day] = dateString.split('-');
   return `${day}/${month}/${year.slice(-2)}`;
 }
 
-// Fetch list of existing tours from Google Sheets
+// Load tours into dropdown
 async function loadTours() {
   const tourSelect = document.getElementById('tourSelect');
+  if (!navigator.onLine) return; // Skip fetch if offline
+  
   try {
     const response = await fetch(`${SCRIPT_URL}?action=getTours`);
     const data = await response.json();
@@ -35,22 +41,18 @@ async function loadTours() {
       });
     }
   } catch (error) {
-    console.error("Error loading tours:", error);
+    console.log("Offline mode: Skipping tour fetch.");
   }
 }
 
-// Save Expense Submission
+// MAIN SAVE FUNCTION (Handles Online + Offline)
 async function submitExpense() {
   const submitBtn = document.getElementById('submitBtn');
-  const statusMsg = document.getElementById('statusMsg');
-
   const tourSelect = document.getElementById('tourSelect').value;
   const newTour = document.getElementById('newTourInput').value.trim();
   const tourName = newTour !== "" ? newTour : tourSelect;
-
   const rawDate = document.getElementById('expenseDate').value;
 
-  // Validation
   if (!tourName) {
     setStatus("Please select an existing tour or enter a new tour name.", "error");
     return;
@@ -71,7 +73,15 @@ async function submitExpense() {
     travelAmount: document.getElementById('travelAmount').value
   };
 
-  // Hard UI Lock during submission
+  // CHECK IF OFFLINE
+  if (!navigator.onLine) {
+    saveToLocalQueue(payload);
+    setStatus("Offline! Expense saved on phone. Will sync automatically when connected.", "info");
+    resetFormFields();
+    return;
+  }
+
+  // ONLINE SUBMISSION
   submitBtn.disabled = true;
   setStatus("Saving expense...", "info");
 
@@ -80,25 +90,71 @@ async function submitExpense() {
       method: 'POST',
       body: JSON.stringify(payload)
     });
-
     const result = await response.json();
 
     if (result.status === 'success') {
       setStatus(result.message, "success");
       resetFormFields();
-      loadTours(); // Refresh dropdown list
+      loadTours();
     } else {
       setStatus(`Error: ${result.message}`, "error");
     }
   } catch (error) {
-    console.error("Submission failed:", error);
-    setStatus("Network error. Please try again.", "error");
+    // Fallback if request failed due to sudden network loss
+    saveToLocalQueue(payload);
+    setStatus("Connection failed. Saved offline for auto-sync!", "info");
+    resetFormFields();
   } finally {
     submitBtn.disabled = false;
   }
 }
 
-// Clear form after successful submit
+// --- LOCAL STORAGE (OFFLINE OUTBOX) FUNCTIONS ---
+
+function getLocalQueue() {
+  const queue = localStorage.getItem('offlineExpenses');
+  return queue ? JSON.parse(queue) : [];
+}
+
+function saveToLocalQueue(payload) {
+  const queue = getLocalQueue();
+  queue.push(payload);
+  localStorage.setItem('offlineExpenses', JSON.stringify(queue));
+}
+
+async function syncOfflineExpenses() {
+  const queue = getLocalQueue();
+  if (queue.length === 0) return;
+
+  setStatus(`Internet restored! Syncing ${queue.length} offline entry/entries...`, "info");
+
+  const remainingQueue = [];
+
+  for (const payload of queue) {
+    try {
+      const response = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (result.status !== 'success') {
+        remainingQueue.push(payload); // Retry later if error
+      }
+    } catch (err) {
+      remainingQueue.push(payload); // Keep in queue if sync fails
+    }
+  }
+
+  localStorage.setItem('offlineExpenses', JSON.stringify(remainingQueue));
+
+  if (remainingQueue.length === 0) {
+    setStatus("All offline expenses synced successfully to Google Sheets!", "success");
+    loadTours();
+  } else {
+    setStatus(`Synced some entries. ${remainingQueue.length} pending next connection.`, "info");
+  }
+}
+
 function resetFormFields() {
   document.getElementById('bfAmount').value = '';
   document.getElementById('lunchAmount').value = '';
@@ -107,16 +163,16 @@ function resetFormFields() {
   document.getElementById('travelAmount').value = '';
   document.getElementById('newTourInput').value = '';
   
-  // Reset date to today
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('expenseDate').value = today;
 }
 
-// Download Excel File
 async function downloadExcel() {
+  if (!navigator.onLine) {
+    setStatus("You must be online to download the Excel sheet.", "error");
+    return;
+  }
   const downloadBtn = document.getElementById('downloadBtn');
-  const statusMsg = document.getElementById('statusMsg');
-
   downloadBtn.disabled = true;
   setStatus("Generating Excel download link...", "info");
 
@@ -131,24 +187,23 @@ async function downloadExcel() {
       setStatus("Failed to generate Excel download.", "error");
     }
   } catch (error) {
-    console.error("Download failed:", error);
     setStatus("Error triggering Excel download.", "error");
   } finally {
     downloadBtn.disabled = false;
   }
 }
 
-// Display Status Messages
 function setStatus(msg, type) {
   const statusMsg = document.getElementById('statusMsg');
   statusMsg.textContent = msg;
   statusMsg.className = `status-message ${type}`;
 }
-// Register Service Worker for Offline Mode
+
+// Service Worker Registration
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('Offline Service Worker registered! Scope:', reg.scope))
-      .catch(err => console.error('Service Worker registration failed:', err));
+      .then(reg => console.log('SW registered!'))
+      .catch(err => console.error('SW failed:', err));
   });
 }
