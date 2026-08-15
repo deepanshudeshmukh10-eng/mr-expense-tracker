@@ -1,9 +1,7 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlJVdwBFKkfwL2jqjRql7UZuVTqHin1l_IfoI3D8iFJteanHwpyG181K22SqQeuGOq9Q/exec";
-
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxUIOyP01vNkcowYD35S8ChG1SEA_TsW8a3KG3Pzje8jHxlKAAHBIALJZBuTHb41lDQSA/exec";
 let activeTourName = "";
 let existingToursList = [];
 
-// Track active category states
 const activeCategories = {
   bf: false,
   lunch: false,
@@ -75,7 +73,32 @@ function startTour(tourName) {
   document.getElementById('page2').classList.add('active');
 }
 
-// Toggle chip & section visibility
+// Download SPECIFIC Tour Sheet (Page 1 Button)
+async function downloadSelectedTour() {
+  const selectVal = document.getElementById('tourSelect').value;
+  if (!selectVal) {
+    setPage1Status("Please select a tour to download.", "error");
+    return;
+  }
+
+  setPage1Status(`Preparing Excel for ${selectVal}...`, "info");
+
+  try {
+    const response = await fetch(`${SCRIPT_URL}?action=downloadSpecificTour&tourName=${encodeURIComponent(selectVal)}`);
+    const data = await response.json();
+
+    if (data.status === 'success') {
+      setPage1Status("Download starting...", "success");
+      window.open(data.downloadUrl, '_blank');
+    } else {
+      setPage1Status(`Error: ${data.message}`, "error");
+    }
+  } catch (error) {
+    setPage1Status("Failed to generate download link.", "error");
+  }
+}
+
+// Interactive Toggle - Input shows directly below the clicked button!
 function toggleCategory(catKey) {
   activeCategories[catKey] = !activeCategories[catKey];
   
@@ -85,6 +108,8 @@ function toggleCategory(catKey) {
   if (activeCategories[catKey]) {
     chipBtn.classList.add('active');
     inputGroup.classList.remove('hidden');
+    const firstInput = inputGroup.querySelector('input');
+    if (firstInput) firstInput.focus();
   } else {
     chipBtn.classList.remove('active');
     inputGroup.classList.add('hidden');
@@ -191,7 +216,6 @@ function resetFields() {
   document.getElementById('flightAmount').value = '';
   document.getElementById('otherTravelAmount').value = '';
 
-  // Hide inputs & deactivate chips
   ['bf', 'lunch', 'dinner', 'stay', 'travel'].forEach(catKey => {
     activeCategories[catKey] = false;
     document.getElementById(`chip-${catKey}`).classList.remove('active');
@@ -244,6 +268,12 @@ function setStatus(msg, type) {
   const statusMsg = document.getElementById('statusMsg');
   statusMsg.textContent = msg;
   statusMsg.className = `status-message ${type}`;
+}
+
+function setPage1Status(msg, type) {
+  const page1Status = document.getElementById('page1Status');
+  page1Status.textContent = msg;
+  page1Status.className = `status-message ${type}`;
 }
 
 if ('serviceWorker' in navigator) {

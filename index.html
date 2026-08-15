@@ -14,7 +14,7 @@
 <body>
   <div class="app-container">
 
-    <!-- PAGE 1: TOUR SELECTION -->
+    <!-- PAGE 1: TOUR SELECTION & DOWNLOAD TOUR -->
     <main id="page1" class="card active">
       <div class="card-header">
         <h2>📍 Select or Start Tour</h2>
@@ -25,16 +25,22 @@
         <select id="tourSelect" onchange="handleSelectTour()">
           <option value="">(Fetching tours...)</option>
         </select>
-        <button class="btn btn-blue" onclick="proceedWithSelectedTour()">Continue with Selected Tour</button>
+        
+        <div class="button-row">
+          <button class="btn btn-blue" onclick="proceedWithSelectedTour()">Continue with Selected Tour</button>
+          <button class="btn btn-outline" onclick="downloadSelectedTour()">📥 Download Tour Excel</button>
+        </div>
       </div>
 
       <div class="divider"><span>Or Start a New Tour</span></div>
 
       <div class="form-group">
-        <input type="text" id="newTourInput" placeholder="e.g. Tour 1 - Jaipur" oninput="handleInputTour()">
+        <input type="text" id="newTourInput" placeholder="e.g. MP & CG Tour" oninput="handleInputTour()">
         <span id="tourError" class="field-error"></span>
         <button class="btn btn-green" onclick="proceedWithNewTour()">Create New Tour</button>
       </div>
+      
+      <div id="page1Status" class="status-message"></div>
     </main>
 
     <!-- PAGE 2: EXPENSE LOGGING FORM -->
@@ -49,77 +55,87 @@
         <input type="date" id="expenseDate">
       </div>
 
-      <!-- Location Input -->
+      <!-- Location Input (Text Allowed Here) -->
       <div class="form-group">
         <label for="locationInput">Location / City</label>
-        <input type="text" id="locationInput" placeholder="e.g. Jaipur Sector 5">
+        <input type="text" id="locationInput" placeholder="e.g. Bhopal Sector 3">
       </div>
 
-      <!-- Expense Category Chips Grid -->
       <label class="section-label">Tap items to add expenses:</label>
-      <div class="chip-grid">
-        <button type="button" class="chip-btn" id="chip-bf" onclick="toggleCategory('bf')">🍳 Breakfast</button>
-        <button type="button" class="chip-btn" id="chip-lunch" onclick="toggleCategory('lunch')">🥗 Lunch</button>
-        <button type="button" class="chip-btn" id="chip-dinner" onclick="toggleCategory('dinner')">🍲 Dinner</button>
-        <button type="button" class="chip-btn" id="chip-stay" onclick="toggleCategory('stay')">🏨 Accommodation</button>
-        <button type="button" class="chip-btn full-width" id="chip-travel" onclick="toggleCategory('travel')">🚗 Travel</button>
-      </div>
 
-      <!-- Dynamic Inputs Section (Just below the chips) -->
-      <div class="dynamic-inputs-container">
-        <!-- Breakfast Input -->
-        <div class="form-group category-input hidden" id="group-bf">
-          <label for="bfAmount">Breakfast Amount (₹)</label>
-          <input type="number" id="bfAmount" min="0" placeholder="0">
+      <!-- INLINE GRID (Inputs appear directly below each button) -->
+      <div class="interactive-items-container">
+        
+        <!-- Breakfast -->
+        <div class="item-block">
+          <button type="button" class="chip-btn" id="chip-bf" onclick="toggleCategory('bf')">🍳 Breakfast</button>
+          <div class="form-group inline-input hidden" id="group-bf">
+            <label for="bfAmount">Breakfast Amount (₹)</label>
+            <input type="number" inputmode="numeric" pattern="[0-9]*" id="bfAmount" min="0" placeholder="0">
+          </div>
         </div>
 
-        <!-- Lunch Input -->
-        <div class="form-group category-input hidden" id="group-lunch">
-          <label for="lunchAmount">Lunch Amount (₹)</label>
-          <input type="number" id="lunchAmount" min="0" placeholder="0">
+        <!-- Lunch -->
+        <div class="item-block">
+          <button type="button" class="chip-btn" id="chip-lunch" onclick="toggleCategory('lunch')">🥗 Lunch</button>
+          <div class="form-group inline-input hidden" id="group-lunch">
+            <label for="lunchAmount">Lunch Amount (₹)</label>
+            <input type="number" inputmode="numeric" pattern="[0-9]*" id="lunchAmount" min="0" placeholder="0">
+          </div>
         </div>
 
-        <!-- Dinner Input -->
-        <div class="form-group category-input hidden" id="group-dinner">
-          <label for="dinnerAmount">Dinner Amount (₹)</label>
-          <input type="number" id="dinnerAmount" min="0" placeholder="0">
+        <!-- Dinner -->
+        <div class="item-block">
+          <button type="button" class="chip-btn" id="chip-dinner" onclick="toggleCategory('dinner')">🍲 Dinner</button>
+          <div class="form-group inline-input hidden" id="group-dinner">
+            <label for="dinnerAmount">Dinner Amount (₹)</label>
+            <input type="number" inputmode="numeric" pattern="[0-9]*" id="dinnerAmount" min="0" placeholder="0">
+          </div>
         </div>
 
-        <!-- Accommodation Input -->
-        <div class="form-group category-input hidden" id="group-stay">
-          <label for="stayAmount">Accommodation Amount (₹)</label>
-          <input type="number" id="stayAmount" min="0" placeholder="0">
+        <!-- Accommodation -->
+        <div class="item-block">
+          <button type="button" class="chip-btn" id="chip-stay" onclick="toggleCategory('stay')">🏨 Accommodation</button>
+          <div class="form-group inline-input hidden" id="group-stay">
+            <label for="stayAmount">Accommodation Amount (₹)</label>
+            <input type="number" inputmode="numeric" pattern="[0-9]*" id="stayAmount" min="0" placeholder="0">
+          </div>
         </div>
 
-        <!-- Travel Modes Section -->
-        <div class="travel-box hidden" id="group-travel">
-          <div class="travel-box-title">🚌 Dedicated Travel Options:</div>
+        <!-- Travel Section -->
+        <div class="item-block full-width">
+          <button type="button" class="chip-btn full-width-btn" id="chip-travel" onclick="toggleCategory('travel')">🚗 Travel</button>
           
-          <div class="form-group">
-            <label for="trainAmount">🚆 Train Fare (₹)</label>
-            <input type="number" id="trainAmount" min="0" placeholder="0">
-          </div>
+          <div class="travel-box hidden" id="group-travel">
+            <div class="travel-box-title">🚌 Dedicated Travel Options:</div>
+            
+            <div class="form-group">
+              <label for="trainAmount">🚆 Train Fare (₹)</label>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" id="trainAmount" min="0" placeholder="0">
+            </div>
 
-          <div class="form-group">
-            <label for="busAmount">🚌 Bus Fare (₹)</label>
-            <input type="number" id="busAmount" min="0" placeholder="0">
-          </div>
+            <div class="form-group">
+              <label for="busAmount">🚌 Bus Fare (₹)</label>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" id="busAmount" min="0" placeholder="0">
+            </div>
 
-          <div class="form-group">
-            <label for="autoAmount">🛺 Auto / Taxi Fare (₹)</label>
-            <input type="number" id="autoAmount" min="0" placeholder="0">
-          </div>
+            <div class="form-group">
+              <label for="autoAmount">🛺 Auto / Taxi Fare (₹)</label>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" id="autoAmount" min="0" placeholder="0">
+            </div>
 
-          <div class="form-group">
-            <label for="flightAmount">✈️ Flight Fare (₹)</label>
-            <input type="number" id="flightAmount" min="0" placeholder="0">
-          </div>
+            <div class="form-group">
+              <label for="flightAmount">✈️ Flight Fare (₹)</label>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" id="flightAmount" min="0" placeholder="0">
+            </div>
 
-          <div class="form-group">
-            <label for="otherTravelAmount">🛵 Other Travel (₹)</label>
-            <input type="number" id="otherTravelAmount" min="0" placeholder="0">
+            <div class="form-group">
+              <label for="otherTravelAmount">🛵 Other Travel (₹)</label>
+              <input type="number" inputmode="numeric" pattern="[0-9]*" id="otherTravelAmount" min="0" placeholder="0">
+            </div>
           </div>
         </div>
+
       </div>
 
       <!-- Action Buttons -->

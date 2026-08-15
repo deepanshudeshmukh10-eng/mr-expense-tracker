@@ -1,4 +1,3 @@
-/* Minimal Professional Palette */
 :root {
   --primary-blue: #2563eb;
   --primary-blue-hover: #1d4ed8;
@@ -38,7 +37,6 @@ body {
   max-width: 440px;
 }
 
-/* Card Styling */
 .card {
   display: none;
   background: var(--card-bg);
@@ -48,20 +46,22 @@ body {
   border: 1px solid var(--border-color);
   flex-direction: column;
   gap: 16px;
+  animation: fadeIn 0.25s ease-in-out;
 }
 
-.card.active {
-  display: flex;
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
+
+.card.active { display: flex; }
 
 .card-header h2 {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--text-dark);
   text-align: center;
 }
 
-/* Form Groups & Inputs */
 .form-group {
   display: flex;
   flex-direction: column;
@@ -86,11 +86,12 @@ select {
   background-color: #ffffff;
   color: var(--text-dark);
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
 }
 
 input:focus, select:focus {
   border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .divider {
@@ -114,46 +115,58 @@ input:focus, select:focus {
   font-weight: 600;
 }
 
-/* Chips Grid */
-.chip-grid {
+/* Interactive Items Grid with Inline Expanding Inputs */
+.interactive-items-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
+}
+
+.item-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item-block.full-width {
+  grid-column: span 2;
 }
 
 .chip-btn {
+  width: 100%;
   padding: 12px 8px;
   font-size: 0.9rem;
-  font-weight: 600;
+  font-weight: 700;
   background: var(--chip-bg);
   border: 1.5px solid var(--chip-border);
   border-radius: 12px;
   color: var(--text-dark);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
 }
 
-.chip-btn.full-width {
-  grid-column: span 2;
+.chip-btn:active {
+  transform: scale(0.97);
 }
 
 .chip-btn.active {
   background: var(--chip-active-bg);
   border-color: var(--chip-active-border);
   color: var(--primary-blue);
-  box-shadow: 0 0 0 1px var(--primary-blue);
+  box-shadow: 0 0 0 2px var(--primary-blue);
 }
 
-/* Dynamic Sections */
-.dynamic-inputs-container {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.inline-input {
+  animation: slideDown 0.2s ease-out;
 }
 
-.hidden {
-  display: none !important;
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
 }
+
+.hidden { display: none !important; }
 
 .travel-box {
   background: #f8fafc;
@@ -163,6 +176,7 @@ input:focus, select:focus {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  animation: slideDown 0.2s ease-out;
 }
 
 .travel-box-title {
@@ -171,28 +185,36 @@ input:focus, select:focus {
   color: var(--primary-blue);
 }
 
-/* Buttons */
+/* Button Layouts */
+.button-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
 .btn {
   width: 100%;
   padding: 14px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   border: none;
   border-radius: 10px;
   cursor: pointer;
   color: #ffffff;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
-.btn-blue {
-  background-color: var(--primary-blue);
-}
-.btn-blue:hover { background-color: var(--primary-blue-hover); }
+.btn:active { transform: scale(0.98); }
 
-.btn-green {
-  background-color: var(--success-green);
+.btn-blue { background-color: var(--primary-blue); }
+.btn-green { background-color: var(--success-green); }
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--primary-blue);
+  border: 1.5px solid var(--primary-blue);
 }
-.btn-green:hover { background-color: var(--success-green-hover); }
 
 .btn-save {
   background-color: var(--primary-blue);
