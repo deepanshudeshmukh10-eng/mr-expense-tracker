@@ -1,4 +1,6 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxUIOyP01vNkcowYD35S8ChG1SEA_TsW8a3KG3Pzje8jHxlKAAHBIALJZBuTHb41lDQSA/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyXWjZGzDXNpjVBRhVGQNdAn9TniDSLoBLzTuPruOoleXqpCeSh5GqfuWCn9aH5Q-1cLQ/exec";
+const API_SECRET = "MY_SECRET_KEY_98765"; // MUST MATCH Code.gs!
+
 let activeTourName = "";
 let existingToursList = [];
 
@@ -11,6 +13,8 @@ const activeCategories = {
 };
 
 window.addEventListener('DOMContentLoaded', () => {
+  initTheme();
+
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('expenseDate').value = today;
 
@@ -21,6 +25,31 @@ window.addEventListener('DOMContentLoaded', () => {
     syncOfflineExpenses();
   }
 });
+
+/* DARK / LIGHT THEME TOGGLE LOGIC */
+function initTheme() {
+  const savedTheme = localStorage.getItem('theme');
+  const themeToggle = document.getElementById('themeToggle');
+  
+  if (savedTheme === 'dark') {
+    document.body.classList.add('dark-mode');
+    themeToggle.checked = true;
+  } else {
+    document.body.classList.remove('dark-mode');
+    themeToggle.checked = false;
+  }
+}
+
+function toggleTheme() {
+  const themeToggle = document.getElementById('themeToggle');
+  if (themeToggle.checked) {
+    document.body.classList.add('dark-mode');
+    localStorage.setItem('theme', 'dark');
+  } else {
+    document.body.classList.remove('dark-mode');
+    localStorage.setItem('theme', 'light');
+  }
+}
 
 function goToPage1() {
   document.getElementById('page2').classList.remove('active');
@@ -73,7 +102,6 @@ function startTour(tourName) {
   document.getElementById('page2').classList.add('active');
 }
 
-// Download SPECIFIC Tour Sheet (Page 1 Button)
 async function downloadSelectedTour() {
   const selectVal = document.getElementById('tourSelect').value;
   if (!selectVal) {
@@ -84,7 +112,7 @@ async function downloadSelectedTour() {
   setPage1Status(`Preparing Excel for ${selectVal}...`, "info");
 
   try {
-    const response = await fetch(`${SCRIPT_URL}?action=downloadSpecificTour&tourName=${encodeURIComponent(selectVal)}`);
+    const response = await fetch(`${SCRIPT_URL}?action=downloadSpecificTour&tourName=${encodeURIComponent(selectVal)}&token=${API_SECRET}`);
     const data = await response.json();
 
     if (data.status === 'success') {
@@ -98,7 +126,6 @@ async function downloadSelectedTour() {
   }
 }
 
-// Interactive Toggle - Input shows directly below the clicked button!
 function toggleCategory(catKey) {
   activeCategories[catKey] = !activeCategories[catKey];
   
@@ -121,7 +148,7 @@ async function loadTours() {
   const tourSelect = document.getElementById('tourSelect');
   
   try {
-    const response = await fetch(`${SCRIPT_URL}?action=getTours`);
+    const response = await fetch(`${SCRIPT_URL}?action=getTours&token=${API_SECRET}`);
     const data = await response.json();
 
     if (data.status === 'success') {
@@ -149,14 +176,33 @@ function formatDateToDDMMYY(dateString) {
 async function submitExpense() {
   const submitBtn = document.getElementById('submitBtn');
   const rawDate = document.getElementById('expenseDate').value;
-  const location = document.getElementById('locationInput').value.trim();
+  
+  // FORCE UPPERCASE LOCATION
+  const location = document.getElementById('locationInput').value.trim().toUpperCase();
 
+  const dateError = document.getElementById('dateError');
+  const locationError = document.getElementById('locationError');
+  
+  dateError.textContent = '';
+  locationError.textContent = '';
+
+  let isValid = true;
+
+  // STRICT CLIENT-SIDE VALIDATION FOR REQUIRED FIELDS
   if (!rawDate) {
-    setStatus("Please select a date.", "error");
-    return;
+    dateError.textContent = "Date is required.";
+    isValid = false;
   }
 
+  if (!location) {
+    locationError.textContent = "Location / City is required.";
+    isValid = false;
+  }
+
+  if (!isValid) return;
+
   const payload = {
+    token: API_SECRET,
     tourName: activeTourName,
     date: formatDateToDDMMYY(rawDate),
     location: location,

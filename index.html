@@ -12,6 +12,21 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+  <!-- Top Theme Toggle Bar -->
+  <div class="theme-bar">
+    <label class="theme-switch">
+      <input type="checkbox" id="themeToggle" onchange="toggleTheme()">
+      <span class="slider">
+        <span class="celestial"></span>
+        <span class="cloud cloud-1"></span>
+        <span class="cloud cloud-2"></span>
+        <span class="star star-1"></span>
+        <span class="star star-2"></span>
+      </span>
+    </label>
+  </div>
+
   <div class="app-container">
 
     <!-- PAGE 1: TOUR SELECTION & DOWNLOAD TOUR -->
@@ -49,21 +64,23 @@
         <h2 id="currentTourHeading">📋 Tour Name</h2>
       </div>
 
-      <!-- Date Input -->
+      <!-- Mandatory Date Input -->
       <div class="form-group">
-        <label for="expenseDate">Date</label>
-        <input type="date" id="expenseDate">
+        <label for="expenseDate">Date <span class="required-star">*</span></label>
+        <input type="date" id="expenseDate" required>
+        <span id="dateError" class="field-error"></span>
       </div>
 
-      <!-- Location Input (Text Allowed Here) -->
+      <!-- Mandatory Location Input (Uppercase CSS Applied) -->
       <div class="form-group">
-        <label for="locationInput">Location / City</label>
-        <input type="text" id="locationInput" placeholder="e.g. Bhopal Sector 3">
+        <label for="locationInput">Location / City <span class="required-star">*</span></label>
+        <input type="text" id="locationInput" class="uppercase-input" placeholder="e.g. BHOPAL SECTOR 3" oninput="this.value = this.value.toUpperCase()" required>
+        <span id="locationError" class="field-error"></span>
       </div>
 
       <label class="section-label">Tap items to add expenses:</label>
 
-      <!-- INLINE GRID (Inputs appear directly below each button) -->
+      <!-- INLINE GRID -->
       <div class="interactive-items-container">
         
         <!-- Breakfast -->
