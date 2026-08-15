@@ -1,17 +1,20 @@
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxw9iJvMfMwQ9SGeUDvd5Vr6u9AiXxTBrf7bfD80ZLIn-c2ZiEtc7YnqoyseOTHmDTbAw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzlJVdwBFKkfwL2jqjRql7UZuVTqHin1l_IfoI3D8iFJteanHwpyG181K22SqQeuGOq9Q/exec";
 
-let existingToursList = [];
-let selectedTravelMode = "Train"; // Default active mode
 let activeTourName = "";
+let existingToursList = [];
+
+// Track active category states
+const activeCategories = {
+  bf: false,
+  lunch: false,
+  dinner: false,
+  stay: false,
+  travel: false
+};
 
 window.addEventListener('DOMContentLoaded', () => {
-  // Set default date to Today
   const today = new Date().toISOString().split('T')[0];
   document.getElementById('expenseDate').value = today;
-
-  // Restore Theme
-  const savedTheme = localStorage.getItem('appTheme') || 'light';
-  document.documentElement.setAttribute('data-theme', savedTheme);
 
   loadTours();
 
@@ -21,48 +24,9 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// --- THEME SWITCHER ---
-function toggleTheme() {
-  const currentTheme = document.documentElement.getAttribute('data-theme');
-  const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', newTheme);
-  localStorage.setItem('appTheme', newTheme);
-}
-
-// --- NAVIGATION & PAGE LOGIC ---
 function goToPage1() {
   document.getElementById('page2').classList.remove('active');
   document.getElementById('page1').classList.add('active');
-}
-
-function proceedToPage2() {
-  const selectVal = document.getElementById('tourSelect').value;
-  const inputVal = document.getElementById('newTourInput').value.trim();
-  const errorSpan = document.getElementById('tourError');
-
-  errorSpan.textContent = "";
-
-  if (inputVal !== "") {
-    // Check uniqueness (case-insensitive)
-    const exists = existingToursList.some(t => t.toLowerCase() === inputVal.toLowerCase());
-    if (exists) {
-      errorSpan.textContent = "A tour with this name already exists. Select it from the dropdown above!";
-      return;
-    }
-    activeTourName = inputVal;
-  } else if (selectVal !== "") {
-    activeTourName = selectVal;
-  } else {
-    errorSpan.textContent = "Please select an existing tour or enter a new tour name.";
-    return;
-  }
-
-  // Update Page 2 Heading
-  document.getElementById('currentTourHeading').textContent = activeTourName;
-
-  // Switch pages
-  document.getElementById('page1').classList.remove('active');
-  document.getElementById('page2').classList.add('active');
 }
 
 function handleSelectTour() {
@@ -79,18 +43,57 @@ function handleInputTour() {
   }
 }
 
-// --- TRAVEL MODE BUTTON SWITCH ---
-function selectTravelMode(btnElement) {
-  const buttons = document.querySelectorAll('#travelToggleGroup .toggle-btn');
-  buttons.forEach(b => b.classList.remove('active'));
-  
-  btnElement.classList.add('active');
-  selectedTravelMode = btnElement.getAttribute('data-mode');
+function proceedWithSelectedTour() {
+  const selectVal = document.getElementById('tourSelect').value;
+  if (!selectVal) {
+    document.getElementById('tourError').textContent = "Please choose a tour from the dropdown.";
+    return;
+  }
+  startTour(selectVal);
 }
 
-// --- FETCH TOURS ---
+function proceedWithNewTour() {
+  const inputVal = document.getElementById('newTourInput').value.trim();
+  if (!inputVal) {
+    document.getElementById('tourError').textContent = "Please type a tour name.";
+    return;
+  }
+  
+  const exists = existingToursList.some(t => t.toLowerCase() === inputVal.toLowerCase());
+  if (exists) {
+    document.getElementById('tourError').textContent = "This tour name already exists. Select it above.";
+    return;
+  }
+
+  startTour(inputVal);
+}
+
+function startTour(tourName) {
+  activeTourName = tourName;
+  document.getElementById('currentTourHeading').textContent = `📋 ${tourName}`;
+  document.getElementById('page1').classList.remove('active');
+  document.getElementById('page2').classList.add('active');
+}
+
+// Toggle chip & section visibility
+function toggleCategory(catKey) {
+  activeCategories[catKey] = !activeCategories[catKey];
+  
+  const chipBtn = document.getElementById(`chip-${catKey}`);
+  const inputGroup = document.getElementById(`group-${catKey}`);
+
+  if (activeCategories[catKey]) {
+    chipBtn.classList.add('active');
+    inputGroup.classList.remove('hidden');
+  } else {
+    chipBtn.classList.remove('active');
+    inputGroup.classList.add('hidden');
+  }
+}
+
 async function loadTours() {
   if (!navigator.onLine) return;
+  const tourSelect = document.getElementById('tourSelect');
   
   try {
     const response = await fetch(`${SCRIPT_URL}?action=getTours`);
@@ -98,8 +101,7 @@ async function loadTours() {
 
     if (data.status === 'success') {
       existingToursList = data.tours || [];
-      const tourSelect = document.getElementById('tourSelect');
-      tourSelect.innerHTML = '<option value="">-- Select Existing Tour --</option>';
+      tourSelect.innerHTML = '<option value="">(Select an existing tour)</option>';
       
       existingToursList.forEach(tour => {
         const option = document.createElement('option');
@@ -109,7 +111,7 @@ async function loadTours() {
       });
     }
   } catch (error) {
-    console.log("Offline mode: Skipping tour fetch.");
+    tourSelect.innerHTML = '<option value="">(Offline mode - type tour below)</option>';
   }
 }
 
@@ -119,10 +121,10 @@ function formatDateToDDMMYY(dateString) {
   return `${day}/${month}/${year.slice(-2)}`;
 }
 
-// --- SAVE EXPENSE FUNCTION ---
 async function submitExpense() {
   const submitBtn = document.getElementById('submitBtn');
   const rawDate = document.getElementById('expenseDate').value;
+  const location = document.getElementById('locationInput').value.trim();
 
   if (!rawDate) {
     setStatus("Please select a date.", "error");
@@ -132,23 +134,27 @@ async function submitExpense() {
   const payload = {
     tourName: activeTourName,
     date: formatDateToDDMMYY(rawDate),
-    breakfast: document.getElementById('bfAmount').value,
-    lunch: document.getElementById('lunchAmount').value,
-    dinner: document.getElementById('dinnerAmount').value,
-    accommodation: document.getElementById('stayAmount').value,
-    travelMode: selectedTravelMode,
-    travelAmount: document.getElementById('travelAmount').value
+    location: location,
+    breakfast: activeCategories.bf ? document.getElementById('bfAmount').value : "0",
+    lunch: activeCategories.lunch ? document.getElementById('lunchAmount').value : "0",
+    dinner: activeCategories.dinner ? document.getElementById('dinnerAmount').value : "0",
+    accommodation: activeCategories.stay ? document.getElementById('stayAmount').value : "0",
+    train: activeCategories.travel ? document.getElementById('trainAmount').value : "0",
+    bus: activeCategories.travel ? document.getElementById('busAmount').value : "0",
+    auto: activeCategories.travel ? document.getElementById('autoAmount').value : "0",
+    flight: activeCategories.travel ? document.getElementById('flightAmount').value : "0",
+    otherTravel: activeCategories.travel ? document.getElementById('otherTravelAmount').value : "0"
   };
 
   if (!navigator.onLine) {
     saveToLocalQueue(payload);
-    setStatus("Offline! Expense saved on phone. Will sync automatically when connected.", "info");
-    resetFormFields();
+    setStatus("Offline! Entry saved on phone. Will sync when online.", "info");
+    resetFields();
     return;
   }
 
   submitBtn.disabled = true;
-  setStatus("Saving expense...", "info");
+  setStatus("Saving entry...", "info");
 
   try {
     const response = await fetch(SCRIPT_URL, {
@@ -159,21 +165,43 @@ async function submitExpense() {
 
     if (result.status === 'success') {
       setStatus(result.message, "success");
-      resetFormFields();
+      resetFields();
       loadTours();
     } else {
       setStatus(`Error: ${result.message}`, "error");
     }
   } catch (error) {
     saveToLocalQueue(payload);
-    setStatus("Connection failed. Saved offline for auto-sync!", "info");
-    resetFormFields();
+    setStatus("Network error! Saved offline for auto-sync.", "info");
+    resetFields();
   } finally {
     submitBtn.disabled = false;
   }
 }
 
-// --- OFFLINE QUEUE MANAGEMENT ---
+function resetFields() {
+  document.getElementById('locationInput').value = '';
+  document.getElementById('bfAmount').value = '';
+  document.getElementById('lunchAmount').value = '';
+  document.getElementById('dinnerAmount').value = '';
+  document.getElementById('stayAmount').value = '';
+  document.getElementById('trainAmount').value = '';
+  document.getElementById('busAmount').value = '';
+  document.getElementById('autoAmount').value = '';
+  document.getElementById('flightAmount').value = '';
+  document.getElementById('otherTravelAmount').value = '';
+
+  // Hide inputs & deactivate chips
+  ['bf', 'lunch', 'dinner', 'stay', 'travel'].forEach(catKey => {
+    activeCategories[catKey] = false;
+    document.getElementById(`chip-${catKey}`).classList.remove('active');
+    document.getElementById(`group-${catKey}`).classList.add('hidden');
+  });
+
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('expenseDate').value = today;
+}
+
 function getLocalQueue() {
   const queue = localStorage.getItem('offlineExpenses');
   return queue ? JSON.parse(queue) : [];
@@ -189,8 +217,7 @@ async function syncOfflineExpenses() {
   const queue = getLocalQueue();
   if (queue.length === 0) return;
 
-  setStatus(`Internet restored! Syncing ${queue.length} offline entry/entries...`, "info");
-
+  setStatus(`Syncing ${queue.length} offline entry/entries...`, "info");
   const remainingQueue = [];
 
   for (const payload of queue) {
@@ -200,58 +227,16 @@ async function syncOfflineExpenses() {
         body: JSON.stringify(payload)
       });
       const result = await response.json();
-      if (result.status !== 'success') {
-        remainingQueue.push(payload);
-      }
+      if (result.status !== 'success') remainingQueue.push(payload);
     } catch (err) {
       remainingQueue.push(payload);
     }
   }
 
   localStorage.setItem('offlineExpenses', JSON.stringify(remainingQueue));
-
   if (remainingQueue.length === 0) {
-    setStatus("All offline expenses synced successfully to Google Sheets!", "success");
+    setStatus("All offline entries synced successfully!", "success");
     loadTours();
-  } else {
-    setStatus(`Synced some entries. ${remainingQueue.length} pending next connection.`, "info");
-  }
-}
-
-function resetFormFields() {
-  document.getElementById('bfAmount').value = '';
-  document.getElementById('lunchAmount').value = '';
-  document.getElementById('dinnerAmount').value = '';
-  document.getElementById('stayAmount').value = '';
-  document.getElementById('travelAmount').value = '';
-  
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('expenseDate').value = today;
-}
-
-async function downloadExcel() {
-  if (!navigator.onLine) {
-    setStatus("You must be online to download the Excel sheet.", "error");
-    return;
-  }
-  const downloadBtn = document.getElementById('downloadBtn');
-  downloadBtn.disabled = true;
-  setStatus("Generating Excel download link...", "info");
-
-  try {
-    const response = await fetch(`${SCRIPT_URL}?action=downloadExcel`);
-    const data = await response.json();
-
-    if (data.status === 'success') {
-      setStatus("Excel file download starting...", "success");
-      window.open(data.downloadUrl, '_blank');
-    } else {
-      setStatus("Failed to generate Excel download.", "error");
-    }
-  } catch (error) {
-    setStatus("Error triggering Excel download.", "error");
-  } finally {
-    downloadBtn.disabled = false;
   }
 }
 
@@ -261,11 +246,8 @@ function setStatus(msg, type) {
   statusMsg.className = `status-message ${type}`;
 }
 
-// Service Worker Registration
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('SW registered!'))
-      .catch(err => console.error('SW failed:', err));
+    navigator.serviceWorker.register('./sw.js').catch(err => console.log('SW error:', err));
   });
 }

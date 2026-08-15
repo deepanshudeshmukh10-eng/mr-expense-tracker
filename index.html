@@ -13,104 +13,119 @@
 </head>
 <body>
   <div class="app-container">
-    
-    <!-- Top Header & Theme Toggle Switch -->
-    <header class="app-header">
-      <h1>MR Expense Tracker</h1>
-      
-      <!-- Day/Night Pill Switch -->
-      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle theme">
-        <span class="toggle-slider"></span>
-        <span class="toggle-text day-text">DAY MODE ☀️</span>
-        <span class="toggle-text night-text">NIGHT MODE 🌙</span>
-      </button>
-    </header>
 
-    <!-- PAGE 1: TOUR SELECTION / CREATION -->
-    <main id="page1" class="card view-page active">
-      <h2>Select or Create Tour</h2>
-      
-      <!-- Option 1: Select Previous -->
+    <!-- PAGE 1: TOUR SELECTION -->
+    <main id="page1" class="card active">
+      <div class="card-header">
+        <h2>📍 Select or Start Tour</h2>
+      </div>
+
       <div class="form-group">
-        <label for="tourSelect">Option 1: Choose Previous Tour</label>
+        <label for="tourSelect">Select Existing Tour</label>
         <select id="tourSelect" onchange="handleSelectTour()">
-          <option value="">-- Select Existing Tour --</option>
+          <option value="">(Fetching tours...)</option>
         </select>
+        <button class="btn btn-blue" onclick="proceedWithSelectedTour()">Continue with Selected Tour</button>
       </div>
 
-      <div class="divider"><span>OR</span></div>
+      <div class="divider"><span>Or Start a New Tour</span></div>
 
-      <!-- Option 2: Create Unique New Tour -->
       <div class="form-group">
-        <label for="newTourInput">Option 2: Create New Tour</label>
-        <input type="text" id="newTourInput" placeholder="e.g., Mumbai Sales 2026" oninput="handleInputTour()">
+        <input type="text" id="newTourInput" placeholder="e.g. Tour 1 - Jaipur" oninput="handleInputTour()">
         <span id="tourError" class="field-error"></span>
+        <button class="btn btn-green" onclick="proceedWithNewTour()">Create New Tour</button>
       </div>
-
-      <button id="startTourBtn" class="btn btn-primary" onclick="proceedToPage2()">Proceed to Log Expenses &rarr;</button>
     </main>
 
     <!-- PAGE 2: EXPENSE LOGGING FORM -->
-    <main id="page2" class="card view-page">
-      <div class="page2-header">
-        <button class="btn-back" onclick="goToPage1()">&larr; Change Tour</button>
-        <h2 id="currentTourHeading" class="active-tour-heading">Tour Name</h2>
+    <main id="page2" class="card">
+      <div class="card-header center">
+        <h2 id="currentTourHeading">📋 Tour Name</h2>
       </div>
 
-      <!-- Date Selection -->
+      <!-- Date Input -->
       <div class="form-group">
-        <label for="expenseDate">Expense Date</label>
+        <label for="expenseDate">Date</label>
         <input type="date" id="expenseDate">
       </div>
 
-      <!-- Expense Amounts -->
-      <div class="section-title">Log Expenses</div>
-      
-      <div class="grid-inputs">
-        <div class="form-group">
-          <label for="bfAmount">Breakfast (₹)</label>
+      <!-- Location Input -->
+      <div class="form-group">
+        <label for="locationInput">Location / City</label>
+        <input type="text" id="locationInput" placeholder="e.g. Jaipur Sector 5">
+      </div>
+
+      <!-- Expense Category Chips Grid -->
+      <label class="section-label">Tap items to add expenses:</label>
+      <div class="chip-grid">
+        <button type="button" class="chip-btn" id="chip-bf" onclick="toggleCategory('bf')">🍳 Breakfast</button>
+        <button type="button" class="chip-btn" id="chip-lunch" onclick="toggleCategory('lunch')">🥗 Lunch</button>
+        <button type="button" class="chip-btn" id="chip-dinner" onclick="toggleCategory('dinner')">🍲 Dinner</button>
+        <button type="button" class="chip-btn" id="chip-stay" onclick="toggleCategory('stay')">🏨 Accommodation</button>
+        <button type="button" class="chip-btn full-width" id="chip-travel" onclick="toggleCategory('travel')">🚗 Travel</button>
+      </div>
+
+      <!-- Dynamic Inputs Section (Just below the chips) -->
+      <div class="dynamic-inputs-container">
+        <!-- Breakfast Input -->
+        <div class="form-group category-input hidden" id="group-bf">
+          <label for="bfAmount">Breakfast Amount (₹)</label>
           <input type="number" id="bfAmount" min="0" placeholder="0">
         </div>
 
-        <div class="form-group">
-          <label for="lunchAmount">Lunch (₹)</label>
+        <!-- Lunch Input -->
+        <div class="form-group category-input hidden" id="group-lunch">
+          <label for="lunchAmount">Lunch Amount (₹)</label>
           <input type="number" id="lunchAmount" min="0" placeholder="0">
         </div>
 
-        <div class="form-group">
-          <label for="dinnerAmount">Dinner (₹)</label>
+        <!-- Dinner Input -->
+        <div class="form-group category-input hidden" id="group-dinner">
+          <label for="dinnerAmount">Dinner Amount (₹)</label>
           <input type="number" id="dinnerAmount" min="0" placeholder="0">
         </div>
 
-        <div class="form-group">
-          <label for="stayAmount">Accommodation (₹)</label>
+        <!-- Accommodation Input -->
+        <div class="form-group category-input hidden" id="group-stay">
+          <label for="stayAmount">Accommodation Amount (₹)</label>
           <input type="number" id="stayAmount" min="0" placeholder="0">
         </div>
-      </div>
 
-      <!-- Travel Details & Toggle Buttons -->
-      <div class="section-title">Travel Details</div>
-      
-      <div class="form-group">
-        <label>Mode of Travel</label>
-        <div class="travel-toggle-group" id="travelToggleGroup">
-          <button type="button" class="toggle-btn active" data-mode="Train" onclick="selectTravelMode(this)">Train</button>
-          <button type="button" class="toggle-btn" data-mode="Bus" onclick="selectTravelMode(this)">Bus</button>
-          <button type="button" class="toggle-btn" data-mode="Auto / Cab" onclick="selectTravelMode(this)">Auto / Cab</button>
-          <button type="button" class="toggle-btn" data-mode="Flight" onclick="selectTravelMode(this)">Flight</button>
-          <button type="button" class="toggle-btn" data-mode="Other" onclick="selectTravelMode(this)">Other</button>
+        <!-- Travel Modes Section -->
+        <div class="travel-box hidden" id="group-travel">
+          <div class="travel-box-title">🚌 Dedicated Travel Options:</div>
+          
+          <div class="form-group">
+            <label for="trainAmount">🚆 Train Fare (₹)</label>
+            <input type="number" id="trainAmount" min="0" placeholder="0">
+          </div>
+
+          <div class="form-group">
+            <label for="busAmount">🚌 Bus Fare (₹)</label>
+            <input type="number" id="busAmount" min="0" placeholder="0">
+          </div>
+
+          <div class="form-group">
+            <label for="autoAmount">🛺 Auto / Taxi Fare (₹)</label>
+            <input type="number" id="autoAmount" min="0" placeholder="0">
+          </div>
+
+          <div class="form-group">
+            <label for="flightAmount">✈️ Flight Fare (₹)</label>
+            <input type="number" id="flightAmount" min="0" placeholder="0">
+          </div>
+
+          <div class="form-group">
+            <label for="otherTravelAmount">🛵 Other Travel (₹)</label>
+            <input type="number" id="otherTravelAmount" min="0" placeholder="0">
+          </div>
         </div>
-      </div>
-
-      <div class="form-group">
-        <label for="travelAmount">Travel Expense (₹)</label>
-        <input type="number" id="travelAmount" min="0" placeholder="0">
       </div>
 
       <!-- Action Buttons -->
       <div class="actions">
-        <button id="submitBtn" class="btn btn-primary" onclick="submitExpense()">Save Expense</button>
-        <button id="downloadBtn" class="btn btn-secondary" onclick="downloadExcel()">Download Excel Sheet</button>
+        <button id="submitBtn" class="btn btn-save" onclick="submitExpense()">Save Entry</button>
+        <button class="btn-link" onclick="goToPage1()">&larr; Change Tour</button>
       </div>
 
       <div id="statusMsg" class="status-message"></div>
